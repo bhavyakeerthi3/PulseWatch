@@ -1,16 +1,16 @@
 package dev.pulsewatch.service;
 
 import dev.pulsewatch.api.ServiceRequest; import dev.pulsewatch.domain.*; import dev.pulsewatch.repo.*;
-import org.springframework.beans.factory.annotation.Value; import org.springframework.data.domain.PageRequest; import org.springframework.data.redis.core.StringRedisTemplate; import org.springframework.http.*; import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional; import org.springframework.web.client.RestClient;
+import org.springframework.beans.factory.annotation.Value; import org.springframework.data.domain.PageRequest; import org.springframework.http.*; import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional; import org.springframework.web.client.RestClient;
 import java.time.*; import java.util.*; import java.util.concurrent.*; import java.util.stream.*;
 
 @Service
 public class MonitoringService {
- private final ServiceRepository services; private final HealthCheckRepository checks; private final MetricRepository metrics; private final AlertRepository alerts; private final IncidentRepository incidents; private final StringRedisTemplate redis; private final EventPublisher events; private final RestClient http;
+ private final ServiceRepository services; private final HealthCheckRepository checks; private final MetricRepository metrics; private final AlertRepository alerts; private final IncidentRepository incidents; private final LatestHealthCache latestHealthCache; private final EventPublisher events; private final RestClient http;
  private final int timeoutMs,retries,retryDelayMs; private final long latencyThreshold; private final int incidentMinutes;
- public MonitoringService(ServiceRepository services,HealthCheckRepository checks,MetricRepository metrics,AlertRepository alerts,IncidentRepository incidents,StringRedisTemplate redis,EventPublisher events,
+ public MonitoringService(ServiceRepository services,HealthCheckRepository checks,MetricRepository metrics,AlertRepository alerts,IncidentRepository incidents,LatestHealthCache latestHealthCache,EventPublisher events,
    @Value("${pulsewatch.collector.timeout-ms}") int timeoutMs,@Value("${pulsewatch.collector.retries}") int retries,@Value("${pulsewatch.collector.retry-delay-ms}") int retryDelayMs,@Value("${pulsewatch.alert.latency-threshold-ms}") long latencyThreshold,@Value("${pulsewatch.alert.down-incident-minutes}") int incidentMinutes){
-  this.services=services;this.checks=checks;this.metrics=metrics;this.alerts=alerts;this.incidents=incidents;this.redis=redis;this.events=events;this.timeoutMs=timeoutMs;this.retries=retries;this.retryDelayMs=retryDelayMs;this.latencyThreshold=latencyThreshold;this.incidentMinutes=incidentMinutes;
+  this.services=services;this.checks=checks;this.metrics=metrics;this.alerts=alerts;this.incidents=incidents;this.latestHealthCache=latestHealthCache;this.events=events;this.timeoutMs=timeoutMs;this.retries=retries;this.retryDelayMs=retryDelayMs;this.latencyThreshold=latencyThreshold;this.incidentMinutes=incidentMinutes;
   this.http=RestClient.builder().requestFactory(factory()).build();
  }
  private org.springframework.http.client.ClientHttpRequestFactory factory(){var f=new org.springframework.http.client.SimpleClientHttpRequestFactory();f.setConnectTimeout(timeoutMs);f.setReadTimeout(timeoutMs);return f;}
@@ -26,7 +26,7 @@ public class MonitoringService {
   for(int attempt=0;attempt<=retries&&!ok;attempt++){try{var result=http.get().uri("http://"+service.getHost()+":"+service.getPort()+service.getHealthEndpoint()).retrieve().toBodilessEntity();code=result.getStatusCode().value();ok=result.getStatusCode().is2xxSuccessful();}
    catch(Exception e){if(e instanceof org.springframework.web.client.HttpStatusCodeException h)code=h.getStatusCode().value();if(attempt<retries)try{Thread.sleep(retryDelayMs);}catch(InterruptedException x){Thread.currentThread().interrupt();break;}}}
   long latency=TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-start);var state=!ok?HealthCheck.State.DOWN:latency>latencyThreshold?HealthCheck.State.DEGRADED:HealthCheck.State.UP;int failures=state==HealthCheck.State.DOWN?(old==null?1:old.getFailureCount()+1):0;
-  var saved=checks.save(new HealthCheck(service,state,latency,code,failures));redis.opsForValue().set("pulsewatch:service:"+service.getId()+":latest",state+":"+latency+":"+saved.getCheckedAt(),java.time.Duration.ofMinutes(5));
+  var saved=checks.save(new HealthCheck(service,state,latency,code,failures));latestHealthCache.put(service.getId(),state+":"+latency+":"+saved.getCheckedAt());
   if(old==null||old.getStatus()!=state)events.publish(state==HealthCheck.State.UP?"SERVICE_RECOVERED":"SERVICE_STATE_CHANGED",saved);
   recordMetrics(service,latency,ok);evaluate(service,saved);return saved;
  }

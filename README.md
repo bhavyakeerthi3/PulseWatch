@@ -98,7 +98,9 @@ npm ci
 npm run build
 ```
 
-For frontend-only development, run `npm run dev` in `frontend` and open `http://localhost:5174`. Port 5174 is reserved for PulseWatch to avoid colliding with other local apps. API and WebSocket requests are proxied to `localhost:8080`; the Spring API still requires PostgreSQL and Redis to be running.
+For a no-Docker local run, start the API first. In PowerShell, run `cd backend; .\run-local.ps1`; the script asks you to set an admin password and starts an H2-backed local profile with an in-memory health cache. Local data resets when the API restarts. Then run `cd frontend; npm run dev` in a second terminal and open `http://localhost:5174`. Port 5174 is reserved for PulseWatch to avoid colliding with other local apps. API and WebSocket requests are proxied to `localhost:8080`.
+
+The local profile is for development only. It uses H2 and a process-local cache; Compose continues to use PostgreSQL and Redis for persistent deployments.
 
 The current suite has four focused unit tests covering request validation and alert lifecycle transitions. Collector failure/recovery, controller behavior, and PostgreSQL/Redis integration scenarios are not covered yet.
 
