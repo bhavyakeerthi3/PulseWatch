@@ -105,7 +105,7 @@ The Java tests cover request validation. Add mocked collector, alert lifecycle, 
 Run against a reachable HTTP endpoint, ideally a disposable test service:
 
 ```sh
-python ../loadtest.py http://localhost:8080/actuator/health --requests 500 --concurrency 20
+python loadtest.py http://localhost:8080/actuator/health --requests 500 --concurrency 20
 ```
 
 The script prints measured throughput, latency percentiles, and error rate for that run. This README makes no performance claims.
