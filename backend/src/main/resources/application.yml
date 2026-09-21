@@ -23,7 +23,4 @@ pulsewatch:
   alert:
     latency-threshold-ms: ${ALERT_LATENCY_THRESHOLD_MS:1500}
     down-incident-minutes: ${INCIDENT_AFTER_MINUTES:2}
-  admin:
-    username: ${ADMIN_USERNAME}
-    password: ${ADMIN_PASSWORD}
 logging.level.dev.pulsewatch: INFO

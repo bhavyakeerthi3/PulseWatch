@@ -10,12 +10,4 @@ $env:TMP = $shortTemp
 $env:JAVA_TOOL_OPTIONS = "-Djava.io.tmpdir=$shortTemp"
 
 $env:SPRING_PROFILES_ACTIVE = 'local'
-if (-not $env:ADMIN_USERNAME) {
-    $env:ADMIN_USERNAME = 'admin'
-}
-if (-not $env:ADMIN_PASSWORD) {
-    $securePassword = Read-Host 'Set the local PulseWatch admin password' -AsSecureString
-    $env:ADMIN_PASSWORD = [System.Net.NetworkCredential]::new('', $securePassword).Password
-}
-
 mvn spring-boot:run
