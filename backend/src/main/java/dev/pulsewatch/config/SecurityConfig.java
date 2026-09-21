@@ -14,7 +14,7 @@ public class SecurityConfig {
     @Bean SecurityFilterChain security(HttpSecurity http) throws Exception {
         return http.cors(Customizer.withDefaults()).csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/**", "/actuator/health/**", "/ws/**").permitAll()
+                    .requestMatchers("/", "/index.html", "/assets/**", "/favicon.svg", "/api/**", "/actuator/health/**", "/ws/**").permitAll()
                     .anyRequest().denyAll()).build();
     }
     @Bean CorsConfigurationSource corsConfigurationSource() {

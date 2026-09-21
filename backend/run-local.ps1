@@ -10,4 +10,5 @@ $env:TMP = $shortTemp
 $env:JAVA_TOOL_OPTIONS = "-Djava.io.tmpdir=$shortTemp"
 
 $env:SPRING_PROFILES_ACTIVE = 'local'
-mvn spring-boot:run
+Push-Location $PSScriptRoot
+try { mvn spring-boot:run } finally { Pop-Location }
