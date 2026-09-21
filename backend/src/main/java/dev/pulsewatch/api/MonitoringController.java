@@ -12,7 +12,8 @@ public class MonitoringController {
  @GetMapping("/services/{id}") public MonitoredService service(@PathVariable UUID id){return monitoring.get(id);}
  @PutMapping("/services/{id}") public MonitoredService update(@PathVariable UUID id,@Valid @RequestBody ServiceRequest r){return monitoring.update(id,r);}
  @DeleteMapping("/services/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void delete(@PathVariable UUID id){monitoring.delete(id);}
- @GetMapping("/services/{id}/health") public List<HealthCheck> health(@PathVariable UUID id){return monitoring.history(id);}
+ @PostMapping("/services/{id}/check") public HealthView check(@PathVariable UUID id){return HealthView.from(monitoring.checkNow(id));}
+ @GetMapping("/services/{id}/health") public List<HealthView> health(@PathVariable UUID id){return monitoring.history(id).stream().map(HealthView::from).toList();}
  @GetMapping("/services/{id}/metrics") public Map<String,Object> metric(@PathVariable UUID id){var rows=monitoring.metricHistory(id);var checks=monitoring.history(id);var latencies=checks.stream().map(HealthCheck::getResponseTimeMs).sorted().toList();return Map.of("history",rows,"p95LatencyMs",percentile(latencies,.95),"p99LatencyMs",percentile(latencies,.99),"uptimePercent",checks.isEmpty()?0:checks.stream().filter(c->c.getStatus()!=HealthCheck.State.DOWN).count()*100.0/checks.size());}
  private long percentile(List<Long> values,double p){return values.isEmpty()?0:values.get((int)Math.min(values.size()-1,Math.ceil(p*values.size())-1));}
  @GetMapping("/alerts") public List<Alert> alerts(){return monitoring.allAlerts();}

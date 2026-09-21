@@ -11,6 +11,9 @@ public class Incident {
     @ManyToOne(optional=false) @JoinColumn(name="alert_id",nullable=false,unique=true) private Alert alert;
     @Column(nullable=false,length=24) private String status="OPEN";
     @Column(nullable=false,updatable=false) private Instant createdAt=Instant.now();
+    private Instant resolvedAt;
+    public Instant getResolvedAt(){return resolvedAt;}
+    public void resolve(){this.status="RESOLVED";this.resolvedAt=Instant.now();}
     protected Incident() {}
     public Incident(MonitoredService service,Alert alert){this.service=service;this.alert=alert;}
     public UUID getId(){return id;} public MonitoredService getService(){return service;} public Alert getAlert(){return alert;} public String getStatus(){return status;} public Instant getCreatedAt(){return createdAt;}
