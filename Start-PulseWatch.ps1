@@ -8,6 +8,7 @@ New-Item -ItemType Directory -Force -Path $runtimePath | Out-Null
 foreach ($tool in @('java', 'mvn', 'npm')) {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "Install $tool and add it to PATH before starting PulseWatch." }
 }
+$javaPath = if ($env:JAVA_HOME -and (Test-Path (Join-Path $env:JAVA_HOME 'bin\java.exe'))) { Join-Path $env:JAVA_HOME 'bin\java.exe' } else { (Get-Command java).Source }
 $listener = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
 if ($listener) {
     try {
@@ -38,13 +39,18 @@ try {
     New-Item -ItemType Directory -Force -Path $shortTemp | Out-Null
     $env:TEMP = $shortTemp
     $env:TMP = $shortTemp
-    $server = Start-Process -FilePath (Get-Command java).Source -ArgumentList @("-Djava.io.tmpdir=$shortTemp", '-jar', "`"$jarPath`"", '--spring.profiles.active=local', '--server.port=8080') -WorkingDirectory $backendPath -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtimePath 'server.log') -RedirectStandardError (Join-Path $runtimePath 'server-error.log')
+    $server = Start-Process -FilePath $javaPath -ArgumentList @("-Djava.io.tmpdir=$shortTemp", '-jar', "`"$jarPath`"", '--spring.profiles.active=local', '--server.port=8080') -WorkingDirectory $backendPath -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtimePath 'server.log') -RedirectStandardError (Join-Path $runtimePath 'server-error.log')
     $server.Id | Set-Content (Join-Path $runtimePath 'server.pid')
     for ($attempt = 0; $attempt -lt 60; $attempt++) {
         if ($server.HasExited) { throw "Server stopped. See $runtimePath\server.log and server-error.log" }
         try {
             $health = Invoke-RestMethod 'http://127.0.0.1:8080/actuator/health' -TimeoutSec 2
             if ($health.status -eq 'UP') {
+                # Oracle PATH shims can spawn a different java.exe process.
+                $listenerId = (Get-NetTCPConnection -LocalPort 8080 -State Listen | Select-Object -First 1).OwningProcess
+                $listenerProcess = Get-CimInstance Win32_Process -Filter "ProcessId = $listenerId"
+                if (-not $listenerProcess.CommandLine.Contains($jarPath)) { throw 'Port 8080 was taken by another process.' }
+                $listenerId | Set-Content (Join-Path $runtimePath 'server.pid')
                 Write-Host 'PulseWatch is ready: http://localhost:8080'
                 Write-Host 'No login. Data persists in backend/data. Stop with Stop-PulseWatch.ps1.'
                 return

@@ -6,6 +6,8 @@ $server = Get-CimInstance Win32_Process -Filter "ProcessId = $serverId" -ErrorAc
 $expectedJar = Join-Path $PSScriptRoot 'backend\target\pulsewatch-api-1.0.0.jar'
 if ($server -and $server.CommandLine.Contains($expectedJar)) {
     Stop-Process -Id $serverId
+    Wait-Process -Id $serverId -Timeout 15 -ErrorAction SilentlyContinue
+    if (Get-Process -Id $serverId -ErrorAction SilentlyContinue) { throw 'PulseWatch has not stopped yet; the process record was retained.' }
     Write-Host 'PulseWatch stopped. Saved monitoring data is retained.'
 } elseif ($server) { throw 'The recorded process belongs to another application; it was not stopped.' }
 Remove-Item -LiteralPath $pidPath
