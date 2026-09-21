@@ -51,7 +51,7 @@ PostgreSQL is the durable source for service configuration, individual health ch
 1. Copy `.env.example` to `.env` and set non-default database and admin passwords.
 2. Run `docker compose up --build` from the repository root.
 3. Open the dashboard at [http://localhost:3000](http://localhost:3000); API is on port 8080.
-4. Sign in using the configured admin credentials. HTTP Basic protects API operations; `/actuator/health` and the WebSocket handshake are public.
+4. Sign in using the configured admin credentials. HTTP Basic protects API operations; `/actuator/health` and the WebSocket handshake are public. The frontend reverse-proxies API and WebSocket traffic to the API container, so the browser only needs port 3000.
 
 Register a monitored service (reachable from the API container):
 
@@ -97,6 +97,8 @@ cd ../frontend
 npm ci
 npm run build
 ```
+
+For frontend-only development, run `npm run dev` in `frontend` and open `http://localhost:5174`. Port 5174 is reserved for PulseWatch to avoid colliding with other local apps. API and WebSocket requests are proxied to `localhost:8080`; the Spring API still requires PostgreSQL and Redis to be running.
 
 The current suite has four focused unit tests covering request validation and alert lifecycle transitions. Collector failure/recovery, controller behavior, and PostgreSQL/Redis integration scenarios are not covered yet.
 
