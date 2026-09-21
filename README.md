@@ -98,7 +98,7 @@ npm ci
 npm run build
 ```
 
-The Java tests cover request validation. Add mocked collector, alert lifecycle, controller, and PostgreSQL/Redis integration tests before treating the first version as production-ready. Full Docker runtime validation needs Docker Engine running.
+The current suite has four focused unit tests covering request validation and alert lifecycle transitions. Collector failure/recovery, controller behavior, and PostgreSQL/Redis integration scenarios are not covered yet.
 
 ## Load testing
 
